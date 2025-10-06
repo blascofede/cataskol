@@ -344,6 +344,11 @@
             });
         });
         
+        // Previene el scroll de la página en dispositivos móviles al interactuar con las botellas
+        document.querySelectorAll('.bottle-container').forEach(container => {
+            container.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+        });
+        
         // --- LÓGICA DE SELECCIÓN DE VINO (BUSCADOR) ---
         const searchInput = document.getElementById('wine-search-input');
         const optionsContainer = document.getElementById('wine-options-container');

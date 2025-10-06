@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sköl Vinoteca - App de Cata</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* ==========================================================================
+           1. VARIABLES Y ESTILOS BASE
+           ========================================================================== */
+        :root {
+            --color-background: #261a12;
+            --color-surface: #5c4a3b;
+            --color-primary: #eac57d; /* Brighter gold for better contrast */
+            --color-primary-light: #f7d394; /* A lighter version for hover states */
+            --color-text-primary: #f7f2ed; /* Slightly whiter for better readability */
+            --color-text-dark: #261a12;
+            --font-serif: 'Lora', serif;
+            --font-display: 'Cinzel', serif;
+        }
+
+        body {
+            font-family: var(--font-serif);
+            background: linear-gradient(170deg, #59524c, #393430);
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            display: flex; /* Añadido para centrar */
+            align-items: center; /* Añadido para centrar */
+            justify-content: center; /* Añadido para centrar */
+        }
+        
+        .app-title {
+            font-family: var(--font-display);
+            color: var(--color-primary);
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
+        }
+
+        /* ==========================================================================
+           2. ESTILOS DE LA PANTALLA DE CATA (TASTING)
+           ========================================================================== */
+        #tasting-screen {
+            display: flex; /* Siempre visible */
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            width: 100%;
+        }
+        .survey-card {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            width: 100%;
+            max-width: 64rem;
+            position: relative;
+            max-height: 95vh;
+            overflow-y: auto; /* Scroll si el contenido es mucho */
+        }
+        .aspect-label {
+            font-family: var(--font-display);
+            color: var(--color-primary);
+        }
+        .form-input {
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid rgba(240, 230, 218, 0.2);
+            color: var(--color-text-primary);
+            border-radius: 0.5rem;
+        }
+        .bottle-container {
+            position: relative;
+            width: clamp(90px, 20vw, 130px);
+            aspect-ratio: 90 / 280;
+            margin: 0 auto;
+        }
+        .wine-bottle-svg {
+            width: 100%; height: 100%;
+            position: absolute; bottom: 0; left: 0;
+        }
+        .bottle-fill-svg {
+            transition: all 0.2s ease-out;
+        }
+        .bottle-outline {
+            stroke: var(--color-primary);
+            stroke-width: 8; 
+            fill: rgba(0,0,0,0.4);
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+        }
+        .slider {
+            -webkit-appearance: none; appearance: none;
+            position: absolute;
+            width: 278%; 
+            height: 20px;
+            left: calc(50% - 10px); /* CORREGIDO para centrar el slider */
+            top: 105.4%;
+            background: transparent; outline: none; cursor: pointer;
+            transform-origin: 0 0;
+            transform: rotate(-90deg);
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 20px; height: 20px;
+            background: var(--color-primary); border: 2px solid var(--color-text-primary);
+            border-radius: 50%; cursor: pointer;
+        }
+        .value-display {
+            font-family: var(--font-display); color: var(--color-text-dark); background-color: var(--color-primary);
+            padding: 4px 12px; border-radius: 5px; font-size: 1.75rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .info-btn {
+            background-color: transparent;
+            border: 1px solid var(--color-primary);
+            color: var(--color-primary);
+            border-radius: 9999px; /* pill shape */
+            padding: 0px 8px;
+            font-size: 0.75rem; /* 12px */
+            line-height: 1.2;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 0.25rem;
+        }
+        .info-btn:hover {
+            background-color: var(--color-primary);
+            color: var(--color-text-dark);
+        }
+
+        /* Estilos para el dropdown de búsqueda */
+        .search-dropdown-container {
+            position: relative;
+        }
+        .wine-options-container {
+            position: absolute;
+            background-color: var(--color-background);
+            border: 1px solid var(--color-primary);
+            border-radius: 0.5rem;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            margin-top: 0.25rem;
+        }
+        .wine-option {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            color: var(--color-text-primary);
+        }
+        .wine-option:hover, .wine-option.selected {
+            background-color: var(--color-primary);
+            color: var(--color-text-dark);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SVG DEFINITIONS -->
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <path id="new-bottle-path" d="M 50 2 C 45 2 40 10 40 25 L 40 160 C 20 170 15 185 15 200 L 15 370 C 15 378 22 385 30 385 L 110 385 C 118 385 125 378 125 370 L 125 200 C 125 185 120 170 100 160 L 100 25 C 100 10 95 2 90 2 L 50 2 Z" />
+            <clipPath id="new-bottle-clip"><use href="#new-bottle-path"/></clipPath>
+        </defs>
+    </svg>
+
+    <!-- PANTALLA DE CATA -->
+    <div id="tasting-screen">
+         <div class="survey-card p-4 sm:p-6 md:p-10">
+            <header class="text-center mb-6">
+                <img src="assets/logoskol.png" alt="Logo Sköl Vinoteca" class="w-48 h-48 mx-auto">
+            </header>
+            
+            <section class="mb-8">
+                <div class="search-dropdown-container">
+                    <label for="wine-search-input" class="block text-sm font-medium text-[var(--color-primary)] mb-1">Seleccionar Vino</label>
+                    <input type="text" id="wine-search-input" placeholder="Busca un vino..." class="form-input w-full p-3 text-base">
+                    <div id="wine-options-container" class="wine-options-container hidden"></div>
+                </div>
+                <input type="hidden" id="wine-name">
+                <input type="hidden" id="winery">
+                <input type="hidden" id="vintage">
+            </section>
+            
+            <main class="grid grid-cols-2 lg:grid-cols-4 gap-x-2 gap-y-8">
+                 <div class="flex flex-col items-center space-y-4">
+                    <div class="text-center">
+                        <h2 class="aspect-label text-2xl sm:text-3xl">Aroma</h2>
+                        <button class="info-btn" data-title="Aroma" data-description="Cómo evaluar: Sin agitar la copa y luego agitándola, pregúntate: ¿A qué huele? ¿Es frutal, floral, especiado, a madera? ¿Son aromas claros?">+info</button>
+                    </div>
+                    <div class="bottle-container"><svg class="wine-bottle-svg" viewBox="0 0 140 400"><rect class="bottle-fill-svg" x="0" y="200" width="140" height="200" clip-path="url(#new-bottle-clip)" data-fill-id="aroma-fill"/><use href="#new-bottle-path" class="bottle-outline"/></svg><input type="range" min="0" max="100" value="50" class="slider" data-value="aroma-value" data-fill-target="aroma-fill"></div>
+                    <span class="value-display -mt-2" id="aroma-value">50</span>
+                </div>
+                 <div class="flex flex-col items-center space-y-4">
+                    <div class="text-center">
+                        <h2 class="aspect-label text-2xl sm:text-3xl">Acidez</h2>
+                        <button class="info-btn" data-title="Acidez" data-description="Cómo evaluar: Presta atención a cuánta saliva genera. Poca acidez hace que un vino se sienta pesado. Mucha acidez lo hace vibrante y fresco.">+info</button>
+                    </div>
+                    <div class="bottle-container"><svg class="wine-bottle-svg" viewBox="0 0 140 400"><rect class="bottle-fill-svg" x="0" y="200" width="140" height="200" clip-path="url(#new-bottle-clip)" data-fill-id="acidez-fill"/><use href="#new-bottle-path" class="bottle-outline"/></svg><input type="range" min="0" max="100" value="50" class="slider" data-value="acidez-value" data-fill-target="acidez-fill"></div>
+                    <span class="value-display -mt-2" id="acidez-value">50</span>
+                </div>
+                 <div class="flex flex-col items-center space-y-4">
+                    <div class="text-center">
+                        <h2 class="aspect-label text-2xl sm:text-3xl">Cuerpo</h2>
+                        <button class="info-btn" data-title="Cuerpo" data-description="Cómo evaluar: ¿Se siente ligero, de densidad media o espeso? Esto está relacionado con el nivel de alcohol y los taninos (en el caso de los tintos).">+info</button>
+                    </div>
+                    <div class="bottle-container"><svg class="wine-bottle-svg" viewBox="0 0 140 400"><rect class="bottle-fill-svg" x="0" y="200" width="140" height="200" clip-path="url(#new-bottle-clip)" data-fill-id="cuerpo-fill"/><use href="#new-bottle-path" class="bottle-outline"/></svg><input type="range" min="0" max="100" value="50" class="slider" data-value="cuerpo-value" data-fill-target="cuerpo-fill"></div>
+                    <span class="value-display -mt-2" id="cuerpo-value">50</span>
+                </div>
+                 <div class="flex flex-col items-center space-y-4">
+                    <div class="text-center">
+                        <h2 class="aspect-label text-2xl sm:text-3xl">Persistencia</h2>
+                        <button class="info-btn" data-title="Persistencia" data-description="Cómo evaluar: Cuantos segundos después sigues saboreandolo. Un final largo significa bien hecho y complejo. Un final corto es de vinos más simples.">+info</button>
+                    </div>
+                    <div class="bottle-container"><svg class="wine-bottle-svg" viewBox="0 0 140 400"><rect class="bottle-fill-svg" x="0" y="200" width="140" height="200" clip-path="url(#new-bottle-clip)" data-fill-id="persistencia-fill"/><use href="#new-bottle-path" class="bottle-outline"/></svg><input type="range" min="0" max="100" value="50" class="slider" data-value="persistencia-value" data-fill-target="persistencia-fill"></div>
+                    <span class="value-display -mt-2" id="persistencia-value">50</span>
+                </div>
+            </main>
+            <footer class="text-center mt-8">
+                <div class="mb-6"><h3 class="aspect-label text-2xl">Puntuación Total</h3><p id="total-score" class="app-title text-5xl sm:text-6xl" style="text-shadow: none;">50</p><p id="qualitative-score" class="text-lg mt-1 h-6"></p></div>
+                
+                <section class="mb-8 max-w-md mx-auto">
+                    <h3 class="aspect-label text-2xl sm:text-3xl mb-4 text-center">¿Para qué ocasión lo recomendarías?</h3>
+                    <div class="flex flex-wrap justify-center gap-3">
+                        <div class="relative">
+                            <input type="checkbox" id="occasion1" name="occasion" value="Cena elegante" class="absolute opacity-0 w-0 h-0 peer">
+                            <label for="occasion1" class="flex items-center justify-center text-center p-3 rounded-lg bg-black bg-opacity-20 cursor-pointer hover:bg-opacity-30 transition-colors peer-checked:bg-[var(--color-primary)] peer-checked:text-[var(--color-text-dark)] text-base h-full">
+                                Cena elegante
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="occasion2" name="occasion" value="Asado con amigos" class="absolute opacity-0 w-0 h-0 peer">
+                            <label for="occasion2" class="flex items-center justify-center text-center p-3 rounded-lg bg-black bg-opacity-20 cursor-pointer hover:bg-opacity-30 transition-colors peer-checked:bg-[var(--color-primary)] peer-checked:text-[var(--color-text-dark)] text-base h-full">
+                                Asado con amigos
+                            </label>
+                        </div>
+                         <div class="relative">
+                            <input type="checkbox" id="occasion3" name="occasion" value="Regalo" class="absolute opacity-0 w-0 h-0 peer">
+                            <label for="occasion3" class="flex items-center justify-center text-center p-3 rounded-lg bg-black bg-opacity-20 cursor-pointer hover:bg-opacity-30 transition-colors peer-checked:bg-[var(--color-primary)] peer-checked:text-[var(--color-text-dark)] text-base h-full">
+                                Para regalo
+                            </label>
+                        </div>
+                         <div class="relative">
+                            <input type="checkbox" id="occasion4" name="occasion" value="Día a día" class="absolute opacity-0 w-0 h-0 peer">
+                            <label for="occasion4" class="flex items-center justify-center text-center p-3 rounded-lg bg-black bg-opacity-20 cursor-pointer hover:bg-opacity-30 transition-colors peer-checked:bg-[var(--color-primary)] peer-checked:text-[var(--color-text-dark)] text-base h-full">
+                                Para el día a día
+                            </label>
+                        </div>
+                         <div class="relative">
+                            <input type="checkbox" id="occasion5" name="occasion" value="Celebración especial" class="absolute opacity-0 w-0 h-0 peer">
+                            <label for="occasion5" class="flex items-center justify-center text-center p-3 rounded-lg bg-black bg-opacity-20 cursor-pointer hover:bg-opacity-30 transition-colors peer-checked:bg-[var(--color-primary)] peer-checked:text-[var(--color-text-dark)] text-base h-full">
+                                Celebración especial
+                            </label>
+                        </div>
+                    </div>
+                </section>
+                <button id="submit-button" class="bg-[var(--color-primary)] text-[var(--color-text-dark)] font-bold py-4 px-10 rounded-lg shadow-lg hover:bg-[#d1a256] transition-colors duration-300 text-xl">Guardar Cata</button>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Modal de Información -->
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-[var(--color-surface)] rounded-lg shadow-xl p-6 max-w-md w-full relative">
+            <h3 id="modal-title" class="text-2xl font-bold mb-4 font-display text-[var(--color-primary)]"></h3>
+            <p id="modal-description" class="text-base text-[var(--color-text-primary)]"></p>
+            <button id="modal-close-btn" class="absolute top-2 right-2 text-3xl text-[var(--color-primary)] hover:text-[var(--color-primary-light)] leading-none">&times;</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- LÓGICA DE LA FICHA DE CATA ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "...", storageBucket: "...", messagingSenderId: "...", appId: "..." };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        let userId = null;
+
+        onAuthStateChanged(auth, (user) => { if (user) userId = user.uid; });
+
+        async function authenticateUser() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) { console.error("Authentication Error:", error); }
+        }
+
+        const sliders = document.querySelectorAll('.slider');
+        const totalScoreEl = document.getElementById('total-score');
+        const qualitativeScoreEl = document.getElementById('qualitative-score');
+        
+        let currentWineType = 'Tinto'; // Valor por defecto
+
+        const wineColorsHSL = {
+            Tinto:  { h: 0,   s: 53, l_start: 50, l_end: 20 },
+            Blanco: { h: 50,  s: 75, l_start: 95, l_end: 85 },
+            Rosado: { h: 350, s: 80, l_start: 85, l_end: 65 }
+        };
+        
+        const updateSliderVisuals = (slider) => {
+            const value = parseInt(slider.value);
+            const valueEl = document.getElementById(slider.dataset.value);
+            const fillEl = document.querySelector(`[data-fill-id="${slider.dataset.fillTarget}"]`);
+            
+            if (valueEl) valueEl.textContent = value;
+            if (fillEl) {
+                const fillHeight = 385; 
+                const currentFill = (value / 100) * fillHeight;
+                fillEl.setAttribute('y', 385 - currentFill);
+                fillEl.setAttribute('height', currentFill);
+
+                const colorParams = wineColorsHSL[currentWineType];
+                if (colorParams) {
+                    const newLightness = colorParams.l_start + (colorParams.l_end - colorParams.l_start) * (value / 100);
+                    fillEl.style.fill = `hsl(${colorParams.h}, ${colorParams.s}%, ${newLightness}%)`;
+                }
+            }
+        };
+
+        const calculateTotalScore = () => {
+            let total = 0;
+            sliders.forEach(s => total += parseInt(s.value));
+            const average = Math.round(total / sliders.length);
+            totalScoreEl.textContent = average;
+            qualitativeScoreEl.textContent = (score => {
+                if (score >= 95) return "Excepcional"; if (score >= 90) return "Excelente";
+                if (score >= 85) return "Muy Bueno"; if (score >= 80) return "Bueno";
+                return "";
+            })(average);
+            return average;
+        };
+
+        sliders.forEach(slider => {
+            slider.addEventListener('input', () => {
+                updateSliderVisuals(slider);
+                calculateTotalScore();
+            });
+        });
+        
+        // --- LÓGICA DE SELECCIÓN DE VINO (BUSCADOR) ---
+        const searchInput = document.getElementById('wine-search-input');
+        const optionsContainer = document.getElementById('wine-options-container');
+
+        const fictitiousWines = [
+            { name: 'Susurro de los Andes Malbec', winery: 'Viñedos de la Cumbre', vintage: '2022', type: 'Tinto' },
+            { name: 'Luna Creciente Cabernet', winery: 'Bodega del Sol', vintage: '2021', type: 'Tinto' },
+            { name: 'Roca del Fuego Blend', winery: 'Terrazas Olvidadas', vintage: '2020', type: 'Tinto' },
+            { name: 'Brisa Patagónica Pinot Noir', winery: 'Vientos del Sur', vintage: '2023', type: 'Tinto' },
+            { name: 'Oro del Valle Torrontés', winery: 'Finca La Dorada', vintage: '2023', type: 'Blanco' },
+            { name: 'Alma de Cuyo Syrah', winery: 'Viñedos de la Cumbre', vintage: '2021', type: 'Tinto' },
+            { name: 'Estrella Nocturna Bonarda', winery: 'Bodega del Sol', vintage: '2022', type: 'Tinto' },
+            { name: 'Secreto del Enólogo Gran Reserva', winery: 'Terrazas Olvidadas', vintage: '2019', type: 'Tinto' },
+            { name: 'Glaciar Austral Sauvignon Blanc', winery: 'Vientos del Sur', vintage: '2024', type: 'Blanco' },
+            { name: 'Canto de la Tierra Rosé', winery: 'Finca La Dorada', vintage: '2023', type: 'Rosado' }
+        ];
+
+        function populateWineOptions(filter = '') {
+            optionsContainer.innerHTML = '';
+            const filteredWines = fictitiousWines.filter(wine => {
+                const fullText = `${wine.name} ${wine.winery} ${wine.vintage}`.toLowerCase();
+                return fullText.includes(filter.toLowerCase());
+            });
+
+            filteredWines.forEach(wine => {
+                const optionDiv = document.createElement('div');
+                optionDiv.classList.add('wine-option');
+                optionDiv.textContent = `${wine.name} - ${wine.winery} (${wine.vintage})`;
+                optionDiv.dataset.value = JSON.stringify(wine);
+                optionDiv.addEventListener('click', () => {
+                    selectWine(wine);
+                });
+                optionsContainer.appendChild(optionDiv);
+            });
+        }
+
+        function selectWine(wine) {
+            searchInput.value = `${wine.name} - ${wine.winery} (${wine.vintage})`;
+            document.getElementById('wine-name').value = wine.name;
+            document.getElementById('winery').value = wine.winery;
+            document.getElementById('vintage').value = wine.vintage;
+            currentWineType = wine.type;
+            sliders.forEach(updateSliderVisuals);
+            optionsContainer.classList.add('hidden');
+        }
+
+        searchInput.addEventListener('focus', () => {
+            populateWineOptions(searchInput.value);
+            optionsContainer.classList.remove('hidden');
+        });
+
+        searchInput.addEventListener('input', () => {
+            populateWineOptions(searchInput.value);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !optionsContainer.contains(e.target)) {
+                optionsContainer.classList.add('hidden');
+            }
+        });
+        
+        // --- LÓGICA DEL MODAL DE INFORMACIÓN ---
+        const infoModal = document.getElementById('info-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDescription = document.getElementById('modal-description');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const infoButtons = document.querySelectorAll('.info-btn');
+
+        infoButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                modalTitle.textContent = button.dataset.title;
+                modalDescription.textContent = button.dataset.description;
+                infoModal.classList.remove('hidden');
+            });
+        });
+
+        const closeModal = () => {
+            infoModal.classList.add('hidden');
+        };
+
+        modalCloseBtn.addEventListener('click', closeModal);
+        infoModal.addEventListener('click', (e) => {
+            if (e.target === infoModal) {
+                closeModal();
+            }
+        });
+
+        // --- INICIALIZACIÓN ---
+        (async () => {
+            await authenticateUser();
+            sliders.forEach(updateSliderVisuals);
+            calculateTotalScore();
+            populateWineOptions(); // Carga inicial
+        })();
+
+    </script>
+</body>
+</html>
+
